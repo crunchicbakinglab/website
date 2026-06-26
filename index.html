@@ -1,5 +1,3 @@
-
-\
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,6 +6,7 @@
   <title>Crunchic Baking Lab</title>
   <link rel="icon" type="image/png" href="your-logo.png">
   <link rel="apple-touch-icon" href="your-logo.png">
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     :root{
@@ -185,6 +184,7 @@
     .modal-confirm{flex:2;background:var(--pink);color:#fff;border:none;padding:11px;
       border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;}
     .modal-confirm:hover{background:var(--pink-dark);}
+    .modal-confirm:disabled{background:#C9A0A0;cursor:default;}
     .receipt{background:#FFF9F6;border:2px solid var(--card-border);border-radius:20px;
       width:440px;max-width:100%;max-height:90vh;overflow-y:auto;padding:28px;}
     .receipt-header{text-align:center;margin-bottom:18px;border-bottom:2px dashed var(--card-border);padding-bottom:16px;}
@@ -209,11 +209,16 @@
       color:var(--dk-brown);margin-top:10px;padding-top:12px;border-top:2px solid var(--card-border);}
     .receipt-footer{text-align:center;font-size:13px;color:var(--mid-brown);margin-top:16px;
       padding-top:14px;border-top:2px dashed var(--card-border);line-height:1.6;}
+    .receipt-status{text-align:center;font-size:12px;margin-top:10px;min-height:18px;font-weight:600;}
+    .receipt-status.sending{color:var(--mid-brown);}
+    .receipt-status.success{color:#2E7D32;}
+    .receipt-status.error{color:#B05070;}
     .receipt-btns{display:flex;gap:12px;margin-top:18px;}
     .wa-send-btn{flex:2;background:#25D366;color:#fff;border:none;padding:13px;border-radius:28px;
       font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;
       justify-content:center;gap:8px;transition:background .15s;}
     .wa-send-btn:hover{background:#1DA851;}
+    .wa-send-btn:disabled{background:#9bcaa9;cursor:default;}
     .wa-send-btn svg{width:20px;height:20px;fill:#fff;flex-shrink:0;}
     .new-order-btn{flex:1;background:transparent;color:var(--brown);border:2px solid var(--card-border);
       padding:13px;border-radius:28px;font-size:14px;cursor:pointer;font-weight:600;transition:background .15s;}
@@ -343,6 +348,7 @@
     <h3>📋 Your details</h3>
     <div class="modal-field"><label>Full name *</label><input type="text" id="c-name" placeholder="e.g. Ayesha Khan"></div>
     <div class="modal-field"><label>Phone / WhatsApp *</label><input type="text" id="c-phone" placeholder="+92 300 0000000"></div>
+    <div class="modal-field"><label>Email (optional)</label><input type="email" id="c-email" placeholder="you@example.com"></div>
     <div class="modal-field">
       <label>Order type *</label>
       <select id="c-type">
@@ -395,10 +401,11 @@
     </div>
     <div class="receipt-total-row"><span>Total Payable</span><span id="r-total"></span></div>
     <div class="receipt-footer">Thank you for your order! 🤎<br>We'll confirm on WhatsApp shortly.<br><strong>Crunchic Baking Lab, Rawalpindi</strong></div>
+    <div class="receipt-status" id="r-status"></div>
     <div class="receipt-btns">
-      <button class="wa-send-btn" onclick="sendToWhatsApp()">
+      <button class="wa-send-btn" id="confirm-send-btn" onclick="confirmAndSendOrder()">
         <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        ✓ Confirm &amp; Send Order on WhatsApp
+        ✓ Confirm &amp; Send Order
       </button>
       <button class="new-order-btn" onclick="newOrder()">New order</button>
     </div>
@@ -407,6 +414,12 @@
 
 <script>
 const WHATSAPP_NUMBER = '923378637801';
+
+// ── EmailJS config ───────────────────────────────────────────────────────────
+const EMAILJS_SERVICE_ID  = 'service_xtmki4f';
+const EMAILJS_TEMPLATE_ID = 'template_4kwf09p';
+const EMAILJS_PUBLIC_KEY  = 'nWaSpB8S5KumJdd5W';
+if (window.emailjs) { emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); }
 
 const menuItems = [
   { name:'Plain Tea Cake',            price:1600, unit:'2 Pound Cake', cat:'cakes'    },
@@ -684,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function placeOrder() {
   const name = document.getElementById('c-name').value.trim();
   const phone = document.getElementById('c-phone').value.trim();
+  const email = document.getElementById('c-email').value.trim();
   const type = document.getElementById('c-type').value;
   const address = document.getElementById('c-address').value.trim();
   const note = document.getElementById('c-note').value.trim();
@@ -693,7 +707,7 @@ function placeOrder() {
   if (!phone) { document.getElementById('c-phone').style.borderColor = '#B05070'; valid = false; }
   if (type === 'delivery' && !address) { document.getElementById('c-address').style.borderColor = '#B05070'; valid = false; }
   if (!valid) return;
-  orderData = { name, phone, type, address, note };
+  orderData = { name, phone, email, type, address, note };
   document.getElementById('checkout-modal').classList.remove('open');
   showReceipt();
 }
@@ -723,34 +737,101 @@ function showReceipt() {
   document.getElementById('r-total').textContent = orderData.type === 'delivery' ? 'Rs ' + subtotal.toLocaleString() + ' + Delivery Charges' : 'Rs ' + subtotal.toLocaleString();
   if (orderData.note) { document.getElementById('r-note-section').style.display = 'block'; document.getElementById('r-note').textContent = orderData.note; }
   else document.getElementById('r-note-section').style.display = 'none';
+  document.getElementById('r-status').textContent = '';
+  document.getElementById('r-status').className = 'receipt-status';
+  document.getElementById('confirm-send-btn').disabled = false;
   document.getElementById('receipt-modal').classList.add('open');
 }
 
-function sendToWhatsApp() {
-  const now = new Date().toLocaleString('en-PK');
-  let msg = ` *New Order — Crunchic Baking Lab*\n\n`;
-  msg += ` *Customer:* ${orderData.name}\n *Phone:* ${orderData.phone}\n`;
-  msg += ` *Order type:* ${orderData.type === 'delivery' ? ' Delivery' : ' Pick-up'}\n`;
-  if (orderData.address) msg += ` *Address:* ${orderData.address}\n`;
-  msg += `\n *Order Details:*\n`;
+// Builds the order summary used by BOTH WhatsApp + Email so the two channels
+// always show identical line items / totals.
+function buildOrderSummary() {
   let subtotal = 0;
+  const lines = [];
   Object.keys(cart).forEach(key => {
     const info = getCartKeyInfo(key); if (!info) return;
     const sub = info.price * cart[key]; subtotal += sub;
-    msg += `• ${key} × ${cart[key]} = Rs ${sub.toLocaleString()}\n`;
+    lines.push(`${key} x ${cart[key]} = Rs ${sub.toLocaleString()}`);
   });
-  msg += `\n *Subtotal: Rs ${subtotal.toLocaleString()}*`;
-  if (orderData.type === 'delivery') msg += `\n *Delivery:* Charges confirmed on WhatsApp`;
-  msg += `\n *Total Payable: Rs ${subtotal.toLocaleString()}${orderData.type === 'delivery' ? ' + delivery charges' : ''}*`;
-  if (orderData.note) msg += `\n\n *Special requests:* ${orderData.note}`;
-  msg += `\n\n _Ordered at: ${now}_`;
+  return { lines, subtotal };
+}
+
+// Shared param builder — these exact keys must match {{variable}} names
+// in your EmailJS template (see emailjs-template.html).
+function buildEmailParams() {
+  const { lines, subtotal } = buildOrderSummary();
+  const now = new Date().toLocaleString('en-PK');
+  const isDelivery = orderData.type === 'delivery';
+  return {
+    to_name: orderData.name,
+    to_phone: orderData.phone,
+    to_email: orderData.email || 'Not provided',
+    order_type: isDelivery ? 'Delivery' : 'Pick-up',
+    address: orderData.address || 'N/A',
+    items_list: lines.join('\n'),
+    subtotal: 'Rs ' + subtotal.toLocaleString(),
+    delivery_note: isDelivery ? 'Delivery charges to be confirmed on WhatsApp' : 'N/A (Pick-up order)',
+    total: 'Rs ' + subtotal.toLocaleString() + (isDelivery ? ' + delivery charges' : ''),
+    notes: orderData.note || 'None',
+    order_date: now,
+  };
+}
+
+// ── Sends order via WhatsApp (opens wa.me link) ─────────────────────────────
+function sendWhatsAppOrder() {
+  const p = buildEmailParams();
+  let msg = ` *New Order — Crunchic Baking Lab*\n\n`;
+  msg += ` *Customer:* ${p.to_name}\n *Phone:* ${p.to_phone}\n`;
+  msg += ` *Order type:* ${p.order_type === 'Delivery' ? ' Delivery' : ' Pick-up'}\n`;
+  if (orderData.address) msg += ` *Address:* ${p.address}\n`;
+  msg += `\n *Order Details:*\n`;
+  p.items_list.split('\n').forEach(l => msg += `• ${l}\n`);
+  msg += `\n *Subtotal: ${p.subtotal}*`;
+  if (orderData.type === 'delivery') msg += `\n *Delivery:* ${p.delivery_note}`;
+  msg += `\n *Total Payable: ${p.total}*`;
+  if (orderData.note) msg += `\n\n *Special requests:* ${p.notes}`;
+  msg += `\n\n _Ordered at: ${p.order_date}_`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ── Sends order via EmailJS ──────────────────────────────────────────────────
+// BUG FIX: the original code called emailjs.send(serviceId, templateId) with
+// NO third argument, so EmailJS had no template variables to fill in — that's
+// why your emails arrived without order details. The params object now gets
+// passed in as the 3rd argument.
+function sendEmailOrder() {
+  if (!window.emailjs) return Promise.reject(new Error('EmailJS not loaded'));
+  const params = buildEmailParams();
+  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
+}
+
+// ── Confirm button: fires email + WhatsApp together ─────────────────────────
+async function confirmAndSendOrder() {
+  const btn = document.getElementById('confirm-send-btn');
+  const status = document.getElementById('r-status');
+  btn.disabled = true;
+  status.className = 'receipt-status sending';
+  status.textContent = 'Sending order email…';
+
+  try {
+    await sendEmailOrder();
+    status.className = 'receipt-status success';
+    status.textContent = '✓ Email sent! Opening WhatsApp…';
+  } catch (err) {
+    console.error('EmailJS error:', err);
+    status.className = 'receipt-status error';
+    status.textContent = 'Email failed to send — continuing with WhatsApp.';
+  }
+
+  // Always continue to WhatsApp regardless of email outcome
+  sendWhatsAppOrder();
+  btn.disabled = false;
 }
 
 function newOrder() {
   cart = {}; orderData = {};
   document.getElementById('receipt-modal').classList.remove('open');
-  ['c-name','c-phone','c-address','c-note'].forEach(id => document.getElementById(id).value = '');
+  ['c-name','c-phone','c-email','c-address','c-note'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('c-type').value = 'pickup';
   document.getElementById('address-field').style.display = 'none';
   updateCartBadge(); renderMenu(currentCat);
