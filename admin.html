@@ -1,1 +1,8 @@
 
+onSnapshot(collection(db, "orders"), (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+        if(change.type === "added"){
+            alert("🔔 New Order Received!");
+        }
+    });
+});
